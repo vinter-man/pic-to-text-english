@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import sys
@@ -12,6 +13,7 @@ from pic2text.document import Document, fingerprint
 from pic2text.ocr import Engine, RapidEngine, join_lines
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+STATUS_COLORS = {"ok": "32", "no text": "2", "failed": "31"}  # green, dim, red
 
 
 def natural_key(path: Path) -> list[int | str]:
@@ -24,10 +26,22 @@ def find_images(folder: Path) -> list[Path]:
     return sorted(images, key=natural_key)
 
 
-def fit(line: str) -> str:
-    """Cut a progress line to the terminal width so long OCR text doesn't wrap."""
-    width = max(shutil.get_terminal_size().columns, 40)
-    return line if len(line) <= width else line[: width - 1] + "…"
+def paint(text: str, code: str) -> str:
+    """ANSI-colour text when writing to a terminal; respects https://no-color.org."""
+    if not sys.stdout.isatty() or os.environ.get("NO_COLOR"):
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+
+def progress(counter: str, status: str, name: str, text: str = "") -> str:
+    """One status line, with the OCR preview cut to the terminal width so it never wraps."""
+    head = f"  {paint(counter, '2')} {paint(f'{status:<7}', STATUS_COLORS[status])} {name}"
+    if not text:
+        return head
+    room = shutil.get_terminal_size().columns - len(f"  {counter} {status:<7} {name}  ")
+    if len(text) > room:
+        text = text[: max(room - 1, 0)] + "…"
+    return f"{head}  {paint(text, '2')}"
 
 
 def run(
@@ -66,20 +80,20 @@ def run(
             text = join_lines(engine.read(image), min_score)
         except Exception as exc:  # one broken file shouldn't sink the whole batch
             failed += 1
-            print(f"  {counter} failed  {image.name}: {exc}")
+            print(progress(counter, "failed", f"{image.name}: {exc}"))
             continue
         results.append((text, image, digest))
         if text:
-            print(fit(f"  {counter} ok      {image.name}  {text}"))
+            print(progress(counter, "ok", image.name, text))
         else:
-            print(f"  {counter} no text {image.name}")
+            print(progress(counter, "no text", image.name))
 
     if results:
         numbers = doc.append(results, title)
         if len(numbers) == 1:
-            print(f"\nAdded #{numbers.start} to {output}")
+            print(f"\n{paint(f'Added #{numbers.start}', '1;32')} to {output}")
         elif numbers:
-            print(f"\nAdded #{numbers.start}-#{numbers[-1]} to {output}")
+            print(f"\n{paint(f'Added #{numbers.start}-#{numbers[-1]}', '1;32')} to {output}")
         else:
             print(f"\nNo text found; nothing added to {output}")
     return 1 if failed else 0

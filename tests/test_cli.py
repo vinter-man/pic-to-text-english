@@ -1,9 +1,10 @@
+import os
 from pathlib import Path
 
 import pytest
 from PIL import Image
 
-from pic2text.cli import find_images, run
+from pic2text.cli import find_images, progress, run
 from pic2text.ocr import Line
 
 
@@ -128,3 +129,11 @@ def test_broken_image_is_reported_and_the_rest_still_saved(shots, tmp_path, caps
 def test_missing_folder(tmp_path: Path, capsys):
     assert run(tmp_path / "nope", tmp_path / "notes.md", FakeEngine) == 2
     assert "Folder not found" in capsys.readouterr().err
+
+
+def test_progress_line_fits_the_terminal(monkeypatch):
+    monkeypatch.setattr("shutil.get_terminal_size", lambda: os.terminal_size((50, 24)))
+    line = progress("[1/4]", "ok", "IMG_2041.png", "a long sentence " * 10)
+    assert len(line) == 50
+    assert line.endswith("…")
+    assert progress("[2/4]", "no text", "IMG_2042.jpg") == "  [2/4] no text IMG_2042.jpg"
