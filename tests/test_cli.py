@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import pytest
@@ -132,7 +131,7 @@ def test_missing_folder(tmp_path: Path, capsys):
 
 
 def test_progress_line_fits_the_terminal(monkeypatch):
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: os.terminal_size((50, 24)))
+    monkeypatch.setenv("COLUMNS", "50")
     line = progress("[1/4]", "ok", "IMG_2041.png", "a long sentence " * 10)
     assert len(line) == 50
     assert line.endswith("…")
