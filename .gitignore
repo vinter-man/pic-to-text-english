@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Your own screenshots and notes stay local
+/screenshots/
+/notes.md
+
+# OS
+.DS_Store
+Thumbs.db
