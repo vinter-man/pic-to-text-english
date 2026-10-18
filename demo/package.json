@@ -1,0 +1,21 @@
+{
+  "name": "pic2text-demo",
+  "private": true,
+  "description": "Remotion source for the README demo video and banners",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio",
+    "build": "./render.sh"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.536",
+    "@remotion/google-fonts": "4.0.536",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.536"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
