@@ -6,8 +6,8 @@ cd "$(dirname "$0")"
 
 vhs demo.tape
 gh api markdown -f mode=gfm -f text="$(cat ../examples/notes.md)" > public/notes.html
-npx remotion still BannerDark ../docs/banner-dark.png --log=error
-npx remotion still BannerLight ../docs/banner-light.png --log=error
+npx remotion still Banner ../docs/banner.png --scale=2 --log=error
+npx remotion still Meme ../docs/meme.png --scale=2 --log=error
 npx remotion still ResultDark ../docs/result-dark.png --scale=2 --log=error
 npx remotion still ResultLight ../docs/result-light.png --scale=2 --log=error
 npx remotion render Demo out/demo.mp4 --crf=18 --log=error

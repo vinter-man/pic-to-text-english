@@ -47,5 +47,3 @@ export const screenshots = [
   "screenshots/IMG_2041.png",
   "screenshots/IMG_2042.jpg",
 ];
-
-export const installCommand = "uv tool install git+https://github.com/vinter-man/pic-to-text-english";

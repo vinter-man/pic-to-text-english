@@ -11,7 +11,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { Backdrop, Checkbox, GradientText, StepCaption, useEnterExit, WindowChrome } from "./parts";
-import { installCommand, mono, notes, palette, sans, screenshots, serif } from "./theme";
+import { mono, notes, palette, sans, screenshots, serif } from "./theme";
 
 const c = palette.dark;
 
@@ -20,8 +20,7 @@ const INTRO = { from: 0, len: 66 };
 const DROP = { from: 56, len: 118 };
 const TERMINAL = { from: 164, len: 236 };
 const RESULT = { from: 390, len: 140 };
-const OUTRO = { from: 520, len: 100 };
-export const DEMO_FRAMES = OUTRO.from + OUTRO.len;
+export const DEMO_FRAMES = RESULT.from + RESULT.len;
 
 const Intro: React.FC = () => {
   const frame = useCurrentFrame();
@@ -280,53 +279,6 @@ const Result: React.FC = () => {
   );
 };
 
-const Outro: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const s = spring({ frame, fps, config: { damping: 16 } });
-  const typed = Math.round(interpolate(frame, [14, 58], [0, installCommand.length], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  }));
-  const cursorOn = Math.floor(frame / 8) % 2 === 0;
-  return (
-    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", gap: 34 }}>
-      <div
-        style={{
-          fontFamily: sans,
-          fontWeight: 700,
-          fontSize: 132,
-          letterSpacing: -6,
-          opacity: s,
-          transform: `scale(${0.85 + s * 0.15})`,
-        }}
-      >
-        <GradientText>pic2text</GradientText>
-      </div>
-      <div
-        style={{
-          fontFamily: mono,
-          fontSize: 25,
-          color: c.fg,
-          padding: "18px 28px",
-          borderRadius: 16,
-          background: "#ffffff0d",
-          border: "1px solid #ffffff22",
-          opacity: s,
-          minWidth: 1060,
-        }}
-      >
-        <span style={{ color: "#a6e3a1" }}>$ </span>
-        {installCommand.slice(0, typed)}
-        <span style={{ opacity: cursorOn ? 1 : 0, color: "#22d3ee" }}>▍</span>
-      </div>
-      <div style={{ fontFamily: sans, fontSize: 24, color: c.muted, opacity: s }}>
-        Offline OCR · Markdown · MIT
-      </div>
-    </AbsoluteFill>
-  );
-};
-
 export const Demo: React.FC = () => (
   <AbsoluteFill style={{ background: c.bg }}>
     <Backdrop />
@@ -341,9 +293,6 @@ export const Demo: React.FC = () => (
     </Sequence>
     <Sequence from={RESULT.from} durationInFrames={RESULT.len}>
       <Result />
-    </Sequence>
-    <Sequence from={OUTRO.from} durationInFrames={OUTRO.len}>
-      <Outro />
     </Sequence>
   </AbsoluteFill>
 );
