@@ -1,298 +1,413 @@
 import type React from "react";
+import { useEffect, useState } from "react";
 import {
   AbsoluteFill,
+  continueRender,
+  delayRender,
   Img,
-  interpolate,
-  OffthreadVideo,
-  Sequence,
   spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { Backdrop, Checkbox, GradientText, StepCaption, useEnterExit, WindowChrome } from "./parts";
-import { mono, notes, palette, sans, screenshots, serif } from "./theme";
+import { mono, notes, sans, ui } from "./theme";
 
-const c = palette.dark;
+// Frame timeline (30 fps).
+const T = {
+  thumbs: 12,
+  ls: 80,
+  lsOut: 108,
+  run: 122,
+  reading: 146,
+  progress: [164, 184, 204, 224],
+  added: 244,
+  notesTab: 256,
+  entries: [262, 274, 286],
+  again: 310,
+  nothingNew: 356,
+  learn: 378,
+  ticks: [392, 414],
+};
+export const DEMO_FRAMES = 480;
 
-// Scene boundaries in frames (30 fps).
-const INTRO = { from: 0, len: 66 };
-const DROP = { from: 56, len: 118 };
-const TERMINAL = { from: 164, len: 236 };
-const RESULT = { from: 390, len: 140 };
-export const DEMO_FRAMES = RESULT.from + RESULT.len;
+/** Lines of a text file in public/, written by render.sh from a real pic2text run. */
+const useLines = (name: string) => {
+  const [lines, setLines] = useState<string[]>([]);
+  const [handle] = useState(() => delayRender(`Loading ${name}`));
+  useEffect(() => {
+    fetch(staticFile(name))
+      .then((r) => r.text())
+      .then((text) => {
+        setLines(text.replace(/\n$/, "").split("\n"));
+        continueRender(handle);
+      });
+  }, [name, handle]);
+  return lines;
+};
 
-const Intro: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const exit = useEnterExit(0, INTRO.len);
-  const word = (i: number) => {
-    const s = spring({ frame: frame - 6 - i * 5, fps, config: { damping: 14, mass: 0.6 } });
-    return {
-      display: "inline-block",
-      opacity: s,
-      transform: `translateY(${(1 - s) * 50}px) rotate(${(1 - s) * 4}deg)`,
-    } as const;
-  };
-  return (
-    <AbsoluteFill
-      style={{ alignItems: "center", justifyContent: "center", ...exit, transform: undefined }}
+const typed = (text: string, frame: number, start: number, framesPerChar = 1.6) =>
+  text.slice(0, Math.max(0, Math.floor((frame - start) / framesPerChar)));
+
+const Pane: React.FC<{
+  title: React.ReactNode;
+  right?: React.ReactNode;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}> = ({ title, right, style, children }) => (
+  <div
+    style={{
+      position: "absolute",
+      top: 22,
+      bottom: 22,
+      background: ui.pane,
+      border: `1px solid ${ui.border}`,
+      borderRadius: 12,
+      overflow: "hidden",
+      display: "flex",
+      flexDirection: "column",
+      ...style,
+    }}
+  >
+    <div
+      style={{
+        height: 44,
+        flex: "none",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "0 14px",
+        borderBottom: `1px solid ${ui.border}`,
+        fontFamily: sans,
+        fontSize: 14,
+        color: ui.muted,
+      }}
     >
-      <div style={{ fontFamily: mono, fontSize: 24, color: c.muted, marginBottom: 22, ...word(0) }}>
-        $ pic2text
+      {title}
+      <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>{right}</div>
+    </div>
+    <div style={{ flex: 1, position: "relative" }}>{children}</div>
+  </div>
+);
+
+const Pill: React.FC<{ active: boolean; children: React.ReactNode }> = ({ active, children }) => (
+  <span
+    style={{
+      fontFamily: sans,
+      fontSize: 13,
+      padding: "3px 10px",
+      borderRadius: 999,
+      border: `1px solid ${active ? ui.accent : ui.border}`,
+      background: active ? ui.accent : "transparent",
+      color: active ? "#1b0d08" : ui.muted,
+    }}
+  >
+    {children}
+  </span>
+);
+
+const Dots = () => (
+  <>
+    {["#ff5f57", "#febc2e", "#28c840"].map((c) => (
+      <span key={c} style={{ width: 11, height: 11, borderRadius: 6, background: c }} />
+    ))}
+  </>
+);
+
+/** Colour one line of pic2text output the same way the CLI does on a TTY. */
+const OutputLine: React.FC<{ text: string }> = ({ text }) => {
+  const progress = text.match(/^(\s+)(\[\d+\/\d+\]) (ok {6}|no text|failed {2})(.*)$/);
+  if (progress) {
+    const [, indent, counter, status, rest] = progress;
+    const [name, ...preview] = rest.trimStart().split("  ");
+    return (
+      <div>
+        {indent}
+        <span style={{ color: ui.faint }}>{counter}</span>{" "}
+        <span style={{ color: status.startsWith("ok") ? ui.green : ui.muted }}>{status}</span> {name}
+        {preview.length > 0 && <span style={{ color: ui.muted }}>{`  ${preview.join("  ")}`}</span>}
       </div>
-      <div
-        style={{
-          fontFamily: sans,
-          fontWeight: 700,
-          fontSize: 104,
-          letterSpacing: -4,
-          color: c.fg,
-          lineHeight: 1.05,
-          textAlign: "center",
-        }}
-      >
-        <span style={word(1)}>Screenshots</span> <span style={word(2)}>in.</span>
-        <br />
-        <span style={{ ...word(3), fontFamily: serif, fontWeight: 400, letterSpacing: -1 }}>
-          <GradientText style={{ paddingRight: 8 }}>Notes</GradientText>
-        </span>{" "}
-        <span style={word(4)}>out.</span>
+    );
+  }
+  const added = text.match(/^(Added #\S+)(.*)$/);
+  if (added) {
+    return (
+      <div>
+        <span style={{ color: ui.green, fontWeight: 600 }}>{added[1]}</span>
+        {added[2]}
       </div>
-    </AbsoluteFill>
+    );
+  }
+  return <div>{text || " "}</div>;
+};
+
+const Command: React.FC<{ text: string; cursor: boolean }> = ({ text, cursor }) => (
+  <div
+    style={{
+      background: ui.inset,
+      borderLeft: `3px solid ${ui.blue}`,
+      borderRadius: 4,
+      padding: "7px 12px",
+      margin: "10px 0 8px",
+      color: ui.fg,
+    }}
+  >
+    <span style={{ color: ui.blue }}>$ </span>
+    {text}
+    {cursor && <span style={{ background: ui.fg, marginLeft: 1 }}>&nbsp;</span>}
+  </div>
+);
+
+const Terminal: React.FC<{ frame: number }> = ({ frame }) => {
+  const ls = useLines("ls.txt");
+  const run1 = useLines("run-1.txt");
+  const run2 = useLines("run-2.txt");
+  const blink = Math.floor(frame / 15) % 2 === 0;
+
+  // run-1.txt is "Reading …", one line per image, a blank line, "Added …".
+  const run1At = (i: number) =>
+    i === 0 ? T.reading : i <= T.progress.length ? T.progress[i - 1] : T.added;
+
+  const cmd = (text: string, start: number, done: number, speed?: number) =>
+    frame >= start && <Command text={typed(text, frame, start, speed)} cursor={frame < done && blink} />;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        padding: "16px 20px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        fontFamily: mono,
+        fontSize: 16,
+        lineHeight: 1.55,
+        color: ui.fg,
+        whiteSpace: "pre",
+      }}
+    >
+      {cmd("ls screenshots", T.ls, T.lsOut)}
+      {frame >= T.lsOut && ls.map((l) => <div key={l}>{l}</div>)}
+      {cmd("pic2text", T.run, T.reading)}
+      {run1.map((l, i) => frame >= run1At(i) && <OutputLine key={`${i}${l}`} text={l} />)}
+      {cmd("pic2text   # run it again any time", T.again, T.nothingNew, 1.2)}
+      {frame >= T.nothingNew && run2.map((l) => <OutputLine key={l} text={l} />)}
+      {frame < T.ls && (
+        <div style={{ color: ui.blue }}>
+          $ {blink && <span style={{ background: ui.fg }}>&nbsp;</span>}
+        </div>
+      )}
+    </div>
   );
 };
 
-// Where each card floats before being filed (x, y, rotation).
-const fan = [
-  [-330, -100, -8],
-  [300, -120, 6],
-  [-280, 120, 5],
-  [330, 110, -7],
-] as const;
-
-const Drop: React.FC = () => {
-  const frame = useCurrentFrame();
+const Thumbs: React.FC<{ frame: number }> = ({ frame }) => {
   const { fps } = useVideoConfig();
-  const fileAt = 62;
-  const folderIn = spring({ frame: frame - 10, fps, config: { damping: 16 } });
-  const filed = screenshots.filter((_, i) => frame > fileAt + i * 6 + 10).length;
-  const bump = spring({ frame: frame - fileAt - 14, fps, config: { damping: 8, mass: 0.5 } });
-  const exit = useEnterExit(0, DROP.len);
-
+  const files = useLines("ls.txt");
+  const run1 = useLines("run-1.txt");
   return (
-    <AbsoluteFill style={{ ...exit, transform: undefined }}>
-      <StepCaption step="01" text="Drop screenshots into a folder" end={DROP.len} />
-      {screenshots.map((src, i) => {
-        const [x, y, r] = fan[i];
-        const enter = spring({ frame: frame - i * 7, fps, config: { damping: 13, mass: 0.7 } });
-        const file = spring({ frame: frame - fileAt - i * 6, fps, config: { damping: 18 } });
-        const float = Math.sin((frame + i * 20) / 14) * 6 * (1 - file);
-        const tx = interpolate(enter, [0, 1], [x * 2.2, x]) * (1 - file);
-        const ty = interpolate(enter, [0, 1], [y * 2.2 + 300, y]) * (1 - file) + file * 200 + float;
+    <div
+      style={{
+        position: "absolute",
+        inset: 18,
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gridAutoRows: "min-content",
+        gap: 16,
+      }}
+    >
+      {files.map((name, i) => {
+        const s = spring({ frame: frame - T.thumbs - i * 10, fps, config: { damping: 18 } });
+        const line = run1.find((l) => l.includes(` ${name}`)) ?? "";
+        const done = frame >= T.progress[i];
+        const reading = !done && frame >= (i === 0 ? T.reading : T.progress[i - 1]);
+        const ok = line.includes("] ok");
         return (
-          <div
-            key={src}
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: `translate(-50%, -50%) translate(${tx}px, ${ty}px) rotate(${r * (1 - file)}deg) scale(${interpolate(file, [0, 1], [1, 0.12])})`,
-              opacity: enter * interpolate(file, [0.7, 1], [1, 0], { extrapolateLeft: "clamp" }),
-              zIndex: 2,
-            }}
-          >
-            <Img
-              src={staticFile(src)}
+          <div key={name} style={{ opacity: s, transform: `translateY(${(1 - s) * 30}px)` }}>
+            <div
               style={{
-                width: 440,
-                borderRadius: 14,
-                border: "1px solid #ffffff22",
-                boxShadow: "0 30px 60px -20px #000000d0",
-                display: "block",
+                position: "relative",
+                height: 112,
+                borderRadius: 8,
+                overflow: "hidden",
+                border: `1px solid ${reading ? ui.accent : ui.border}`,
+                boxShadow: reading ? `0 0 0 2px ${ui.accent}55` : undefined,
+                background: ui.inset,
               }}
-            />
+            >
+              <Img
+                src={staticFile(`screenshots/${name}`)}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "left top" }}
+              />
+              {done && (
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    bottom: 8,
+                    fontFamily: mono,
+                    fontSize: 12,
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: ok ? "#0f2a17" : ui.inset,
+                    color: ok ? ui.green : ui.muted,
+                    border: `1px solid ${ok ? "#238636" : ui.border}`,
+                  }}
+                >
+                  {ok ? "ok" : "no text"}
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                fontFamily: mono,
+                fontSize: 12,
+                color: ui.muted,
+                marginTop: 6,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {name}
+            </div>
           </div>
         );
       })}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          bottom: 70,
-          transform: `translateX(-50%) translateY(${(1 - folderIn) * 160}px) scale(${1 + (bump - 1) * 0.08 + 0.0})`,
-          display: "flex",
-          alignItems: "center",
-          gap: 18,
-          padding: "18px 28px",
-          borderRadius: 22,
-          background: "#ffffff0f",
-          border: "1px solid #ffffff24",
-          backdropFilter: "blur(14px)",
-          zIndex: 1,
-        }}
-      >
-        <svg width={58} height={46} viewBox="0 0 58 46">
-          <defs>
-            <linearGradient id="folder" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#a78bfa" />
-              <stop offset="1" stopColor="#22d3ee" />
-            </linearGradient>
-          </defs>
-          <path d="M2 8a6 6 0 0 1 6-6h14l6 6h22a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z" fill="url(#folder)" />
-        </svg>
-        <div style={{ fontFamily: mono, fontSize: 28, color: c.fg }}>screenshots/</div>
-        <div
-          style={{
-            fontFamily: sans,
-            fontWeight: 600,
-            fontSize: 20,
-            color: "#0a0b14",
-            background: c.fg,
-            borderRadius: 999,
-            minWidth: 34,
-            textAlign: "center",
-            padding: "3px 10px",
-            opacity: filed > 0 ? 1 : 0,
-          }}
-        >
-          {filed}
-        </div>
-      </div>
-    </AbsoluteFill>
+    </div>
   );
 };
 
-const Terminal: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const enter = spring({ frame: frame - 4, fps, config: { damping: 20, mass: 0.9 } });
-  const exit = useEnterExit(0, TERMINAL.len);
-  const badge = spring({ frame: frame - 120, fps, config: { damping: 12 } });
-  return (
-    <AbsoluteFill style={{ ...exit, transform: undefined, perspective: 1600 }}>
-      <StepCaption step="02" text="Run one command" end={TERMINAL.len} />
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: 128,
-          width: 1200,
-          height: 440,
-          transform: `translateX(-50%) translateY(${(1 - enter) * 120}px) rotateX(${(1 - enter) * 24}deg) scale(${0.9 + enter * 0.1})`,
-          opacity: enter,
-          borderRadius: 16,
-          overflow: "hidden",
-          boxShadow: "0 50px 140px -30px #7c5cff70, 0 30px 80px -20px #000000c0",
-        }}
-      >
-        {/* Real recording of the CLI (demo/demo.tape), trimmed and sped up 1.3x. */}
-        <OffthreadVideo
-          src={staticFile("terminal.mp4")}
-          trimBefore={78}
-          playbackRate={1.3}
-          muted
-          style={{ width: "100%", display: "block" }}
-        />
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          right: 70,
-          bottom: 120,
-          transform: `scale(${badge}) rotate(${(1 - badge) * -12}deg)`,
-          fontFamily: sans,
-          fontWeight: 600,
-          fontSize: 22,
-          color: "#0a0b14",
-          backgroundImage: "linear-gradient(100deg, #a78bfa, #22d3ee)",
-          padding: "10px 18px",
-          borderRadius: 999,
-          boxShadow: "0 12px 30px -8px #22d3ee80",
-        }}
-      >
-        100% offline · no API keys
-      </div>
-    </AbsoluteFill>
-  );
-};
+const Checkbox: React.FC<{ checked: number }> = ({ checked }) => (
+  <svg width={18} height={18} viewBox="0 0 18 18" style={{ flex: "none", marginTop: 4 }}>
+    <rect
+      x={0.75}
+      y={0.75}
+      width={16.5}
+      height={16.5}
+      rx={4}
+      fill={ui.accent}
+      fillOpacity={checked}
+      stroke={checked > 0.5 ? ui.accent : ui.faint}
+      strokeWidth={1.5}
+    />
+    <path
+      d="M4.5 9.2l3 3 6-6.5"
+      fill="none"
+      stroke="#1b0d08"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeDasharray={14}
+      strokeDashoffset={14 * (1 - checked)}
+    />
+  </svg>
+);
 
-const Result: React.FC = () => {
-  const frame = useCurrentFrame();
+const Notes: React.FC<{ frame: number }> = ({ frame }) => {
   const { fps } = useVideoConfig();
-  const enter = spring({ frame, fps, config: { damping: 18 } });
-  const exit = useEnterExit(0, RESULT.len);
   return (
-    <AbsoluteFill style={{ ...exit, transform: undefined }}>
-      <StepCaption step="03" text="Get a checklist you can tick off" end={RESULT.len} />
-      <WindowChrome
-        title="notes.md"
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: 140,
-          width: 1020,
-          transform: `translateX(-50%) translateY(${(1 - enter) * 80}px) scale(${0.94 + enter * 0.06})`,
-          opacity: enter,
-        }}
+    <div style={{ position: "absolute", inset: 0, padding: "18px 24px", fontFamily: sans, color: ui.fg }}>
+      <div
+        style={{ fontSize: 28, fontWeight: 600, paddingBottom: 8, borderBottom: `1px solid ${ui.border}`, marginBottom: 14 }}
       >
-        <div style={{ padding: "24px 44px 34px", fontFamily: sans, color: c.fg }}>
+        Notes
+      </div>
+      {notes.map((text, i) => {
+        const s = spring({ frame: frame - T.entries[i], fps, config: { damping: 200 } });
+        const tick = i < T.ticks.length ? spring({ frame: frame - T.ticks[i], fps, config: { damping: 16 } }) : 0;
+        return (
           <div
+            key={text}
             style={{
-              fontSize: 46,
-              fontWeight: 700,
-              letterSpacing: -1,
-              paddingBottom: 12,
-              borderBottom: `1px solid ${c.border}`,
-              marginBottom: 20,
+              display: "flex",
+              gap: 10,
+              fontSize: 16,
+              lineHeight: 1.5,
+              marginBottom: 12,
+              opacity: s,
+              transform: `translateY(${(1 - s) * 10}px)`,
             }}
           >
-            Notes
+            <span style={{ fontFamily: mono, fontSize: 14, color: ui.muted, marginTop: 2, width: 18 }}>{i + 1}.</span>
+            <Checkbox checked={tick} />
+            <span style={{ color: tick > 0.5 ? ui.muted : ui.fg }}>{text}</span>
           </div>
-          {notes.map((text, i) => {
-            const s = spring({ frame: frame - 12 - i * 9, fps, config: { damping: 16 } });
-            const tick = i < 2 ? spring({ frame: frame - 62 - i * 16, fps, config: { damping: 14 } }) : 0;
-            return (
-              <div
-                key={text}
-                style={{
-                  display: "flex",
-                  gap: 16,
-                  fontSize: 27,
-                  lineHeight: 1.45,
-                  marginBottom: 16,
-                  opacity: s,
-                  transform: `translateX(${(1 - s) * -40}px)`,
-                }}
-              >
-                <span style={{ color: c.muted, fontFamily: mono, fontSize: 22, marginTop: 6, width: 26 }}>
-                  {i + 1}.
-                </span>
-                <Checkbox checked={tick} />
-                <span style={{ opacity: 1 - tick * 0.45 }}>{text}</span>
-              </div>
-            );
-          })}
-        </div>
-      </WindowChrome>
-    </AbsoluteFill>
+        );
+      })}
+    </div>
   );
 };
 
-export const Demo: React.FC = () => (
-  <AbsoluteFill style={{ background: c.bg }}>
-    <Backdrop />
-    <Sequence from={INTRO.from} durationInFrames={INTRO.len}>
-      <Intro />
-    </Sequence>
-    <Sequence from={DROP.from} durationInFrames={DROP.len}>
-      <Drop />
-    </Sequence>
-    <Sequence from={TERMINAL.from} durationInFrames={TERMINAL.len}>
-      <Terminal />
-    </Sequence>
-    <Sequence from={RESULT.from} durationInFrames={RESULT.len}>
-      <Result />
-    </Sequence>
-  </AbsoluteFill>
-);
+export const Demo: React.FC = () => {
+  const frame = useCurrentFrame();
+  const stage = frame < T.run ? "drop" : frame < T.learn ? "run" : "learn";
+  // A hard tab switch, like a real editor. A crossfade also leaves ghosting in the lossy WebP.
+  const notesOn = frame >= T.notesTab ? 1 : 0;
+  const tab = (label: string, active: boolean) => (
+    <span
+      style={{
+        color: active ? ui.fg : ui.muted,
+        paddingBottom: 11,
+        marginBottom: -12,
+        borderBottom: `2px solid ${active ? ui.accent : "transparent"}`,
+      }}
+    >
+      {label}
+    </span>
+  );
+
+  return (
+    <AbsoluteFill style={{ background: ui.page }}>
+      <Pane
+        style={{ left: 22, width: 740 }}
+        title={
+          <>
+            <Dots />
+            <span style={{ marginLeft: 8 }}>zsh · ~/english</span>
+          </>
+        }
+        right={(["drop", "run", "learn"] as const).map((s) => (
+          <Pill key={s} active={s === stage}>
+            {s}
+          </Pill>
+        ))}
+      >
+        <Terminal frame={frame} />
+      </Pane>
+      <Pane
+        style={{ left: 780, right: 22 }}
+        title={
+          <div style={{ display: "flex", gap: 18 }}>
+            {tab("screenshots/", notesOn < 0.5)}
+            {tab("notes.md", notesOn >= 0.5)}
+          </div>
+        }
+      >
+        <div style={{ position: "absolute", inset: 0, opacity: 1 - notesOn }}>
+          {frame < T.thumbs + 4 && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 18,
+                border: `1px dashed ${ui.border}`,
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: sans,
+                color: ui.faint,
+              }}
+            >
+              empty folder
+            </div>
+          )}
+          <Thumbs frame={frame} />
+        </div>
+        <div style={{ position: "absolute", inset: 0, opacity: notesOn }}>
+          <Notes frame={frame} />
+        </div>
+      </Pane>
+    </AbsoluteFill>
+  );
+};

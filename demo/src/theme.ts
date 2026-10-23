@@ -1,38 +1,22 @@
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
-import { loadFont as loadSerif } from "@remotion/google-fonts/InstrumentSerif";
 import { loadFont as loadMono } from "@remotion/google-fonts/JetBrainsMono";
 
-export const sans = loadInter("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin"] })
-  .fontFamily;
-export const serif = loadSerif("italic", { weights: ["400"], subsets: ["latin"] }).fontFamily;
+export const sans = loadInter("normal", { weights: ["400", "500", "600"], subsets: ["latin"] }).fontFamily;
 export const mono = loadMono("normal", { weights: ["400", "600"], subsets: ["latin"] }).fontFamily;
 
-export const palette = {
-  dark: {
-    bg: "#0a0b14",
-    fg: "#f4f4fb",
-    muted: "#9a9cb8",
-    card: "#141627",
-    border: "#262a45",
-    glowA: "#7c5cff",
-    glowB: "#22d3ee",
-    glowC: "#f472b6",
-  },
-  light: {
-    bg: "#fbfbfe",
-    fg: "#14152a",
-    muted: "#5d6080",
-    card: "#ffffff",
-    border: "#e3e4f0",
-    glowA: "#a78bfa",
-    glowB: "#67e8f9",
-    glowC: "#f9a8d4",
-  },
+// GitHub's dark palette, same as the cad-helper demo.
+export const ui = {
+  page: "#0d1117",
+  pane: "#161b22",
+  inset: "#1f242c",
+  border: "#30363d",
+  fg: "#e6edf3",
+  muted: "#8b949e",
+  faint: "#484f58",
+  accent: "#e5795e",
+  green: "#3fb950",
+  blue: "#58a6ff",
 };
-
-export type Mode = keyof typeof palette;
-
-export const accentGradient = "linear-gradient(100deg, #a78bfa 0%, #22d3ee 55%, #f472b6 100%)";
 
 // Copied verbatim from examples/notes.md (real pic2text output).
 export const notes = [
