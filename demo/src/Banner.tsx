@@ -76,10 +76,10 @@ const Dimension: React.FC<{ x: number; y1: number; y2: number; label: string }> 
 /** The right-hand "drawing": four screenshots in, one Markdown sheet out. */
 const Drawing: React.FC = () => {
   const prints = [
-    { src: screenshots[1], left: 64, top: 44, width: 250, rotate: -4 },
-    { src: screenshots[2], left: 210, top: 70, width: 210, rotate: 3 },
-    { src: screenshots[0], left: 34, top: 150, width: 330, rotate: -1.5 },
-    { src: screenshots[3], left: 330, top: 150, width: 100, rotate: 6 },
+    { src: screenshots[1], left: 56, top: 40, width: 240, rotate: -4 },
+    { src: screenshots[2], left: 250, top: 48, width: 190, rotate: 3 },
+    { src: screenshots[0], left: 34, top: 116, width: 236, rotate: -2 },
+    { src: screenshots[3], left: 296, top: 132, width: 128, rotate: 5 },
   ];
   return (
     <div style={{ position: "absolute", left: 790, top: 0, width: 470, height: 640 }}>
@@ -107,14 +107,14 @@ const Drawing: React.FC = () => {
           />
         </div>
       ))}
-      <Dimension x={14} y1={44} y2={215} label="4 files" />
+      <Dimension x={14} y1={40} y2={250} label="4 files" />
 
       {/* OCR leader line */}
-      <div style={{ position: "absolute", left: 230, top: 236, width: 1, height: 82, borderLeft: `1px dashed ${ink}` }} />
+      <div style={{ position: "absolute", left: 230, top: 262, width: 1, height: 56, borderLeft: `1px dashed ${ink}` }} />
       <svg width={14} height={10} style={{ position: "absolute", left: 223.5, top: 316 }}>
         <path d="M0 0 L7 10 L14 0" fill="none" stroke={ink} />
       </svg>
-      <div style={{ position: "absolute", left: 246, top: 258, fontFamily: geistMono, fontSize: 12, color: ink, lineHeight: 1.5 }}>
+      <div style={{ position: "absolute", left: 246, top: 268, fontFamily: geistMono, fontSize: 12, color: ink, lineHeight: 1.5 }}>
         $ pic2text
         <br />
         <span style={{ color: pencil }}>OCR on CPU, offline</span>

@@ -36,7 +36,7 @@ def test_reads_the_example_screenshots():
     engine = RapidEngine()
 
     chat = join_lines(engine.read(EXAMPLES / "Screenshot 2026-10-12 at 09.14.03.png"), 0.75)
-    assert "I went to the woods because I wished to live deliberately" in chat
+    assert chat == "Yes, but I I am more white than you. You look gypsy. I am blonde hair. Blonde"
 
     book = join_lines(engine.read(EXAMPLES / "Screenshot 2026-10-12 at 21.40.55.png"), 0.75)
     assert book.startswith("It is a truth universally acknowledged")

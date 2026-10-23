@@ -62,7 +62,7 @@ The file only ever grows, and the next run continues the numbering from wherever
 
 > :hurtrealbad: Every line has an HTML comment with the fingerprint of its screenshot. You can't see it when the file is rendered, but you can see it in the raw file, so you always know where a phrase came from:
 > ```markdown
-> 2. [ ] I went to the woods because I wished to live deliberately, … <!-- pic2text 761863ec1ed7 Screenshot 2026-10-12 at 09.14.03.png -->
+> 2. [ ] Yes, but I I am more white than you. You look gypsy. I am blonde hair. Blonde <!-- pic2text ae0ade280303 Screenshot 2026-10-12 at 09.14.03.png -->
 > ```
 > Screenshots with no text get a comment-only line, so they aren't read again either. The file that example came from is [`examples/notes.md`](examples/notes.md)
 

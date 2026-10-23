@@ -21,7 +21,7 @@ export const ui = {
 // Copied verbatim from examples/notes.md (real pic2text output).
 export const notes = [
   'hectic full of busy, hurried activity "I\'ve had quite a hectic week."',
-  "I went to the woods because I wished to live deliberately, to front only the essential facts of life, and see if I could not learn what it had to teach.",
+  "Yes, but I I am more white than you. You look gypsy. I am blonde hair. Blonde",
   "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
 ];
 
